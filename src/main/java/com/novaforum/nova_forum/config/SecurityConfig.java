@@ -31,7 +31,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 配置请求授权
                 .authorizeHttpRequests(authz -> authz
-                        // 允许用户注册接口不需要认证
+                        // 允许用户注册和登录接口不需要认证
                         .requestMatchers("/user/register", "/user/login").permitAll()
                         // 其他所有请求都需要认证
                         .anyRequest().authenticated())
