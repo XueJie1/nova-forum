@@ -6,6 +6,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.novaforum.nova_forum.dto.*;
 import com.novaforum.nova_forum.entity.Post;
 import com.novaforum.nova_forum.service.PostService;
@@ -14,6 +15,8 @@ import com.novaforum.nova_forum.util.JwtUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 帖子控制器
@@ -222,15 +225,22 @@ public class PostController {
      * 将Post分页结果转换为PostResponse分页结果
      */
     private IPage<PostResponse> convertToResponsePage(IPage<Post> postPage) {
-        IPage<PostResponse> responsePage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(
+        // 创建新的分页对象
+        Page<PostResponse> responsePage = new Page<>(
                 postPage.getCurrent(),
                 postPage.getSize(),
                 postPage.getTotal());
-
+        
+        // 创建新的列表来存储转换后的数据
+        List<PostResponse> responseList = new ArrayList<>();
+        
         // 转换记录列表
-        postPage.getRecords().forEach(post -> {
-            responsePage.getRecords().add(convertToResponse(post));
-        });
+        for (Post post : postPage.getRecords()) {
+            responseList.add(convertToResponse(post));
+        }
+        
+        // 设置转换后的记录列表
+        responsePage.setRecords(responseList);
 
         return responsePage;
     }

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.novaforum.nova_forum.mapper.PostMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.novaforum.nova_forum.entity.Post">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+        <result column="content" property="content" jdbcType="VARCHAR"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="view_count" property="viewCount" jdbcType="INTEGER"/>
+        <result column="like_count" property="likeCount" jdbcType="INTEGER"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础字段 -->
+    <sql id="Base_Column_List">
+        id, title, content, user_id, view_count, like_count, create_time, update_time
+    </sql>
+
+    <!-- 分页查询帖子列表 -->
+    <select id="selectPostsPage" resultMap="BaseResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM post
+        <where>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据ID查询帖子详情（包含作者信息） -->
+    <select id="selectPostWithAuthorById" resultMap="BaseResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM post
+        WHERE id = #{id}
+    </select>
+
+    <!-- 增加浏览次数 -->
+    <update id="incrementViewCount">
+        UPDATE post 
+        SET view_count = view_count + 1 
+        WHERE id = #{id}
+    </update>
+
+    <!-- 增加点赞次数 -->
+    <update id="incrementLikeCount">
+        UPDATE post 
+        SET like_count = like_count + 1 
+        WHERE id = #{id}
+    </update>
+
+    <!-- 减少点赞次数 -->
+    <update id="decrementLikeCount">
+        UPDATE post 
+        SET like_count = like_count - 1 
+        WHERE id = #{id}
+    </update>
+
+</mapper>
