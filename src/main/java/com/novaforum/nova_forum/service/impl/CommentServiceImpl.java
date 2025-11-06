@@ -69,9 +69,10 @@ public class CommentServiceImpl implements CommentService {
         comment.setUserId(userId);
         comment.setParentId(request.getParentId());
         comment.setContent(request.getContent());
+        comment.setCreateTime(java.time.LocalDateTime.now()); // 手动设置创建时间
 
         commentMapper.insert(comment);
-        
+
         log.info("创建评论成功，评论ID: {}, 用户ID: {}", comment.getId(), userId);
         return comment.getId();
     }
@@ -127,21 +128,21 @@ public class CommentServiceImpl implements CommentService {
     public IPage<CommentResponse> getCommentsByPostId(Long postId, Integer pageNum, Integer pageSize) {
         // 获取所有评论
         List<Comment> allComments = commentMapper.selectCommentsByPostId(postId);
-        
+
         // 构建树形结构
         List<CommentResponse> commentTree = buildCommentTree(allComments);
-        
+
         // 分页处理（简化实现，实际应该在前端或服务层分页）
         int start = (pageNum - 1) * pageSize;
         int end = Math.min(start + pageSize, commentTree.size());
-        
+
         Page<CommentResponse> page = new Page<>(pageNum, pageSize);
         if (start < commentTree.size()) {
             List<CommentResponse> pageData = commentTree.subList(start, end);
             page.setRecords(pageData);
             page.setTotal(commentTree.size());
         }
-        
+
         return page;
     }
 
@@ -150,7 +151,7 @@ public class CommentServiceImpl implements CommentService {
         LambdaQueryWrapper<Comment> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Comment::getUserId, userId)
                 .orderByDesc(Comment::getCreateTime);
-        
+
         return commentMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
     }
 
@@ -159,16 +160,16 @@ public class CommentServiceImpl implements CommentService {
         LambdaQueryWrapper<Comment> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Comment::getParentId, parentId)
                 .orderByAsc(Comment::getCreateTime);
-        
+
         IPage<Comment> commentPage = commentMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
-        
+
         // 转换为Response对象
         Page<CommentResponse> responsePage = new Page<>(pageNum, pageSize, commentPage.getTotal());
         List<CommentResponse> responses = commentPage.getRecords().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
         responsePage.setRecords(responses);
-        
+
         return responsePage;
     }
 
@@ -229,9 +230,20 @@ public class CommentServiceImpl implements CommentService {
             }
         }
 
-        // 按创建时间排序
-        rootComments.sort((a, b) -> a.getCreateTime().compareTo(b.getCreateTime()));
-        
+        // 按创建时间排序，处理null值
+        rootComments.sort((a, b) -> {
+            if (a.getCreateTime() == null && b.getCreateTime() == null) {
+                return 0;
+            }
+            if (a.getCreateTime() == null) {
+                return -1; // null值排在前面
+            }
+            if (b.getCreateTime() == null) {
+                return 1; // null值排在前面
+            }
+            return a.getCreateTime().compareTo(b.getCreateTime());
+        });
+
         // 递归排序子评论
         sortRepliesRecursively(rootComments);
 
@@ -244,7 +256,18 @@ public class CommentServiceImpl implements CommentService {
     private void sortRepliesRecursively(List<CommentResponse> comments) {
         for (CommentResponse comment : comments) {
             if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
-                comment.getReplies().sort((a, b) -> a.getCreateTime().compareTo(b.getCreateTime()));
+                comment.getReplies().sort((a, b) -> {
+                    if (a.getCreateTime() == null && b.getCreateTime() == null) {
+                        return 0;
+                    }
+                    if (a.getCreateTime() == null) {
+                        return -1; // null值排在前面
+                    }
+                    if (b.getCreateTime() == null) {
+                        return 1; // null值排在前面
+                    }
+                    return a.getCreateTime().compareTo(b.getCreateTime());
+                });
                 sortRepliesRecursively(comment.getReplies());
             }
         }
@@ -256,14 +279,13 @@ public class CommentServiceImpl implements CommentService {
     private List<Comment> getAllSubComments(Long parentId) {
         List<Comment> allSubComments = new ArrayList<>();
         List<Comment> directSubComments = commentMapper.selectList(
-            new LambdaQueryWrapper<Comment>().eq(Comment::getParentId, parentId)
-        );
-        
+                new LambdaQueryWrapper<Comment>().eq(Comment::getParentId, parentId));
+
         for (Comment subComment : directSubComments) {
             allSubComments.add(subComment);
             allSubComments.addAll(getAllSubComments(subComment.getId()));
         }
-        
+
         return allSubComments;
     }
 
@@ -273,7 +295,7 @@ public class CommentServiceImpl implements CommentService {
     private CommentResponse convertToResponse(Comment comment) {
         CommentResponse response = new CommentResponse();
         BeanUtils.copyProperties(comment, response);
-        
+
         // 设置用户名
         if (comment.getUserId() != null) {
             User user = userMapper.selectById(comment.getUserId());
@@ -281,7 +303,7 @@ public class CommentServiceImpl implements CommentService {
                 response.setUsername(user.getUsername());
             }
         }
-        
+
         // 设置父评论内容
         if (comment.getParentId() != null) {
             Comment parentComment = commentMapper.selectById(comment.getParentId());
@@ -289,10 +311,10 @@ public class CommentServiceImpl implements CommentService {
                 response.setParentContent(parentComment.getContent());
             }
         }
-        
+
         // 设置回复数量
         response.setReplyCount(getReplyCountByCommentId(comment.getId()));
-        
+
         return response;
     }
 }

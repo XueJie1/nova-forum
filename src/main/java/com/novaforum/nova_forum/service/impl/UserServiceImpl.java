@@ -96,6 +96,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return userMapper.selectById(id);
+    }
+
+    @Override
     public boolean validatePassword(User user, String rawPassword) {
         if (user == null || !StringUtils.hasText(rawPassword)) {
             return false;

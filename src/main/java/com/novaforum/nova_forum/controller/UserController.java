@@ -110,13 +110,16 @@ public class UserController {
                 return ApiResponse.error(401, "无法从令牌中获取用户信息");
             }
 
-            // 这里应该根据ID查询用户信息，暂时简化处理
-            String username = jwtUtil.extractUsername(token);
+            // 根据ID查询完整用户信息
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ApiResponse.error(404, "用户不存在");
+            }
 
             UserProfileResponse response = new UserProfileResponse();
-            response.setUserId(userId);
-            response.setUsername(username);
-            // response.setEmail(email); // 需要从数据库查询
+            response.setUserId(user.getId());
+            response.setUsername(user.getUsername());
+            response.setEmail(user.getEmail());
 
             return ApiResponse.success(response);
 

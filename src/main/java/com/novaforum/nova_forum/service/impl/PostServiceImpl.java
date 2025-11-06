@@ -24,6 +24,9 @@ public class PostServiceImpl implements PostService {
     @Autowired
     private PostMapper postMapper;
 
+    @Autowired
+    private com.novaforum.nova_forum.service.UserService userService;
+
     @Override
     @Transactional
     public Long createPost(Post post, Long userId) {

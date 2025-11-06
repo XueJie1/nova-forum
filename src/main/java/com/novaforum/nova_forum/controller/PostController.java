@@ -32,6 +32,9 @@ public class PostController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private com.novaforum.nova_forum.service.UserService userService;
+
     /**
      * 发布帖子
      */
@@ -217,7 +220,20 @@ public class PostController {
     private PostResponse convertToResponse(Post post) {
         PostResponse response = new PostResponse();
         BeanUtils.copyProperties(post, response);
-        // TODO: 设置作者用户名，需要关联查询
+
+        // 根据userId查询用户名
+        if (post.getUserId() != null) {
+            try {
+                com.novaforum.nova_forum.entity.User user = userService.findById(post.getUserId());
+                if (user != null) {
+                    response.setUsername(user.getUsername());
+                }
+            } catch (Exception e) {
+                // 查询用户信息失败，username保持为null
+                e.printStackTrace();
+            }
+        }
+
         return response;
     }
 
@@ -230,15 +246,15 @@ public class PostController {
                 postPage.getCurrent(),
                 postPage.getSize(),
                 postPage.getTotal());
-        
+
         // 创建新的列表来存储转换后的数据
         List<PostResponse> responseList = new ArrayList<>();
-        
+
         // 转换记录列表
         for (Post post : postPage.getRecords()) {
             responseList.add(convertToResponse(post));
         }
-        
+
         // 设置转换后的记录列表
         responsePage.setRecords(responseList);
 

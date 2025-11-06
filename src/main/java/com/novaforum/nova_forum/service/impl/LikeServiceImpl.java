@@ -1,6 +1,8 @@
 package com.novaforum.nova_forum.service.impl;
 
 import com.novaforum.nova_forum.dto.LikeResponse;
+import com.novaforum.nova_forum.entity.PostLike;
+import com.novaforum.nova_forum.mapper.PostLikeMapper;
 import com.novaforum.nova_forum.mapper.PostMapper;
 import com.novaforum.nova_forum.service.LikeService;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +31,13 @@ public class LikeServiceImpl implements LikeService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final PostMapper postMapper;
+    private final PostLikeMapper postLikeMapper;
 
-    public LikeServiceImpl(RedisTemplate<String, Object> redisTemplate, PostMapper postMapper) {
+    public LikeServiceImpl(RedisTemplate<String, Object> redisTemplate, PostMapper postMapper,
+            PostLikeMapper postLikeMapper) {
         this.redisTemplate = redisTemplate;
         this.postMapper = postMapper;
+        this.postLikeMapper = postLikeMapper;
     }
 
     @Override
@@ -48,7 +53,7 @@ public class LikeServiceImpl implements LikeService {
         String userLikesKey = USER_LIKES_PREFIX + userId;
 
         Boolean isMember = redisTemplate.opsForSet().isMember(likeSetKey, userId);
-        
+
         LikeResponse response = new LikeResponse();
         response.setPostId(postId);
 
@@ -56,7 +61,7 @@ public class LikeServiceImpl implements LikeService {
             // 取消点赞
             redisTemplate.opsForSet().remove(likeSetKey, userId);
             redisTemplate.opsForSet().remove(userLikesKey, postId);
-            
+
             // 更新点赞数
             Long newCount = redisTemplate.opsForSet().size(likeSetKey);
             if (newCount != null) {
@@ -66,14 +71,14 @@ public class LikeServiceImpl implements LikeService {
                 response.setLikeCount(0L);
             }
             response.setIsLiked(false);
-            
+
             log.info("用户 {} 取消点赞帖子 {}", userId, postId);
-            
+
         } else {
             // 点赞
             redisTemplate.opsForSet().add(likeSetKey, userId);
             redisTemplate.opsForSet().add(userLikesKey, postId);
-            
+
             // 更新点赞数
             Long newCount = redisTemplate.opsForSet().size(likeSetKey);
             if (newCount != null) {
@@ -83,7 +88,7 @@ public class LikeServiceImpl implements LikeService {
                 response.setLikeCount(1L);
             }
             response.setIsLiked(true);
-            
+
             log.info("用户 {} 点赞帖子 {}", userId, postId);
         }
 
@@ -93,22 +98,22 @@ public class LikeServiceImpl implements LikeService {
     @Override
     public Long getLikeCount(Long postId) {
         String likeCountKey = LIKE_COUNT_PREFIX + postId;
-        
+
         // 先从缓存获取
         Object cachedCount = redisTemplate.opsForValue().get(likeCountKey);
         if (cachedCount != null) {
             return Long.valueOf(cachedCount.toString());
         }
-        
+
         // 缓存中没有，从Set计算
         String likeSetKey = LIKE_SET_PREFIX + postId;
         Long count = redisTemplate.opsForSet().size(likeSetKey);
-        
+
         // 缓存结果
         if (count != null) {
             redisTemplate.opsForValue().set(likeCountKey, count, CACHE_EXPIRE_TIME, TimeUnit.SECONDS);
         }
-        
+
         return count != null ? count : 0L;
     }
 
@@ -122,39 +127,76 @@ public class LikeServiceImpl implements LikeService {
     @Override
     public Long getLikeCountFromDatabase(Long postId) {
         // 从数据库获取真实点赞数
-        return postMapper.selectById(postId).getLikeCount().longValue();
+        var post = postMapper.selectById(postId);
+        if (post == null) {
+            throw new RuntimeException("帖子不存在: " + postId);
+        }
+        return post.getLikeCount().longValue();
     }
 
     @Override
     public void syncLikeCountsToDatabase(List<Long> postIds) {
+        int successCount = 0;
+        int skipCount = 0;
+
         for (Long postId : postIds) {
             try {
-                Long cacheCount = getLikeCount(postId);
-                Long dbCount = getLikeCountFromDatabase(postId);
-                
-                if (!cacheCount.equals(dbCount)) {
-                    // 同步到数据库
-                    if (cacheCount > dbCount) {
-                        // 增加点赞数
-                        int diff = (int) (cacheCount - dbCount);
-                        for (int i = 0; i < diff; i++) {
-                            postMapper.incrementLikeCount(postId);
-                        }
-                    } else {
-                        // 减少点赞数
-                        int diff = (int) (dbCount - cacheCount);
-                        for (int i = 0; i < diff; i++) {
-                            postMapper.decrementLikeCount(postId);
-                        }
+                // 验证帖子是否存在
+                var post = postMapper.selectById(postId);
+                if (post == null) {
+                    log.warn("跳过不存在的帖子 {} 的同步", postId);
+                    skipCount++;
+                    continue;
+                }
+
+                // 获取Redis中的点赞用户列表
+                String likeSetKey = LIKE_SET_PREFIX + postId;
+                var userIds = redisTemplate.opsForSet().members(likeSetKey);
+
+                if (userIds != null && !userIds.isEmpty()) {
+                    // 删除现有的点赞记录
+                    postLikeMapper.deleteByPostId(postId);
+
+                    // 创建新的点赞记录
+                    List<PostLike> likeRecords = userIds.stream()
+                            .map(userId -> {
+                                PostLike like = new PostLike();
+                                like.setPostId(postId);
+                                like.setUserId(Long.valueOf(userId.toString()));
+                                like.setCreateTime(java.time.LocalDateTime.now());
+                                return like;
+                            })
+                            .collect(java.util.stream.Collectors.toList());
+
+                    // 批量插入点赞记录
+                    if (!likeRecords.isEmpty()) {
+                        postLikeMapper.insertBatch(likeRecords);
                     }
-                    
+
+                    log.info("同步帖子 {} 的点赞记录: {} 条", postId, likeRecords.size());
+                }
+
+                // 同步点赞数到post表
+                Long cacheCount = getLikeCount(postId);
+                Long dbCount = post.getLikeCount().longValue();
+
+                if (!cacheCount.equals(dbCount)) {
+                    // 更新post表的点赞数
+                    post.setLikeCount(cacheCount.intValue());
+                    postMapper.updateById(post);
+
                     log.info("同步帖子 {} 的点赞数: 缓存={}, 数据库={}", postId, cacheCount, dbCount);
                 }
-                
+
+                successCount++;
+
             } catch (Exception e) {
-                log.error("同步帖子 {} 点赞数失败", postId, e);
+                log.error("同步帖子 {} 点赞数据失败", postId, e);
+                throw new RuntimeException("同步帖子 " + postId + " 点赞数据失败: " + e.getMessage(), e);
             }
         }
+
+        log.info("点赞数据同步完成: 成功同步 {} 个帖子，跳过 {} 个不存在的帖子", successCount, skipCount);
     }
 
     /**

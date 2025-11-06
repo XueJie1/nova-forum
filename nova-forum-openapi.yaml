@@ -1,0 +1,1072 @@
+openapi: 3.0.3
+info:
+  title: Nova Forum API
+  description: |
+    Nova Forum 新星论坛 - 现代化社区交流平台API文档
+    
+    ## 功能模块
+    - 用户认证：注册、登录、个人资料管理
+    - 帖子管理：发布、编辑、删除、查看帖子
+    - 评论系统：多层级评论、回复功能
+    - 点赞功能：点赞/取消点赞、状态查询
+    
+    ## 认证方式
+    除注册和登录接口外，所有API需要通过JWT Bearer Token进行认证。
+    请求头格式：`Authorization: Bearer {token}`
+    
+    ## 错误处理
+    所有接口使用统一的响应格式：
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": {...}
+    }
+    ```
+    
+    错误状态码：
+    - 400: 请求参数错误
+    - 401: 未授权/Token无效
+    - 403: 权限不足
+    - 404: 资源不存在
+    - 500: 服务器内部错误
+    
+  version: "1.0.0"
+  contact:
+    name: Nova Forum Team
+    email: contact@nova-forum.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api
+    description: 本地开发环境
+  - url: https://api.nova-forum.com
+    description: 生产环境（预留）
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ========================
+  # 用户认证模块
+  # ========================
+  /user/register:
+    post:
+      summary: 用户注册
+      description: 用户注册新账号
+      tags:
+        - 用户认证
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              username: "testuser123"
+              password: "password123"
+              email: "test@example.com"
+      responses:
+        '200':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: "注册成功"
+                data: null
+        '400':
+          description: 注册失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 400
+                message: "用户名已存在"
+                data: null
+
+  /user/login:
+    post:
+      summary: 用户登录
+      description: 用户登录获取JWT Token
+      tags:
+        - 用户认证
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: "testuser123"
+              password: "password123"
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: 登录失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 400
+                message: "用户名不存在"
+                data: null
+
+  /user/profile:
+    get:
+      summary: 获取用户信息
+      description: 获取当前登录用户的个人信息
+      tags:
+        - 用户认证
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 401
+                message: "令牌无效或已过期"
+                data: null
+
+  # ========================
+  # 帖子管理模块
+  # ========================
+  /post/create:
+    post:
+      summary: 发布帖子
+      description: 创建新的帖子
+      tags:
+        - 帖子管理
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+            example:
+              title: "我的第一篇帖子"
+              content: "这是一个测试帖子的内容。"
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: "帖子发布成功"
+                data: "帖子ID: 123"
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /post/list:
+    get:
+      summary: 获取帖子列表
+      description: 获取帖子列表，支持分页查询
+      tags:
+        - 帖子管理
+      parameters:
+        - in: query
+          name: pageNum
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: 页码，从1开始
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: 每页大小
+        - in: query
+          name: userId
+          schema:
+            type: integer
+            nullable: true
+          description: 按用户ID筛选（可选）
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostListResponse'
+
+  /post/{id}:
+    get:
+      summary: 获取帖子详情
+      description: 根据帖子ID获取帖子详细信息
+      tags:
+        - 帖子管理
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '404':
+          description: 帖子不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      summary: 更新帖子
+      description: 更新指定的帖子内容
+      tags:
+        - 帖子管理
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: 权限不足（只能编辑自己的帖子）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: 删除帖子
+      description: 删除指定的帖子
+      tags:
+        - 帖子管理
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: 权限不足（只能删除自己的帖子）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ========================
+  # 评论系统模块
+  # ========================
+  /comment/create:
+    post:
+      summary: 创建评论
+      description: 对帖子创建评论或回复
+      tags:
+        - 评论系统
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+            example:
+              postId: 123
+              content: "这是一条评论"
+              parentId: null
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /comment/list/{postId}:
+    get:
+      summary: 获取帖子评论列表
+      description: 获取指定帖子的评论列表（包含回复）
+      tags:
+        - 评论系统
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+        - in: query
+          name: pageNum
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: 页码
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+          description: 每页大小
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentListResponse'
+
+  /comment/{id}:
+    get:
+      summary: 获取评论详情
+      description: 根据评论ID获取评论详细信息
+      tags:
+        - 评论系统
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 评论ID
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+
+    put:
+      summary: 更新评论
+      description: 更新指定的评论内容
+      tags:
+        - 评论系统
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 评论ID
+        - in: query
+          name: content
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1000
+          description: 新的评论内容
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      summary: 删除评论
+      description: 删除指定的评论
+      tags:
+        - 评论系统
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 评论ID
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /comment/user/{userId}:
+    get:
+      summary: 获取用户评论列表
+      description: 获取指定用户的评论列表
+      tags:
+        - 评论系统
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 用户ID
+        - in: query
+          name: pageNum
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: 页码
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+          description: 每页大小
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentListResponse'
+
+  /comment/replies/{parentId}:
+    get:
+      summary: 获取评论回复列表
+      description: 获取指定评论的回复列表
+      tags:
+        - 评论系统
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 父评论ID
+        - in: query
+          name: pageNum
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: 页码
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+          description: 每页大小
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentListResponse'
+
+  /comment/count/{postId}:
+    get:
+      summary: 获取帖子评论数量
+      description: 获取指定帖子的评论总数
+      tags:
+        - 评论系统
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: "success"
+                data: 15
+
+  # ========================
+  # 点赞功能模块
+  # ========================
+  /like/{postId}:
+    post:
+      summary: 点赞/取消点赞
+      description: 对帖子进行点赞或取消点赞操作
+      tags:
+        - 点赞功能
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 操作成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+              example:
+                code: 200
+                message: "success"
+                data:
+                  postId: 123
+                  likeCount: 5
+                  isLiked: true
+
+  /like/count/{postId}:
+    get:
+      summary: 获取帖子点赞数
+      description: 获取指定帖子的点赞总数
+      tags:
+        - 点赞功能
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: "success"
+                data: 15
+
+  /like/status/{postId}:
+    get:
+      summary: 获取用户点赞状态
+      description: 获取当前用户对指定帖子的点赞状态
+      tags:
+        - 点赞功能
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 帖子ID
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: "success"
+                data: true
+
+  /like/sync:
+    post:
+      summary: 同步点赞数到数据库
+      description: 将Redis缓存中的点赞数同步到数据库（管理员功能）
+      tags:
+        - 点赞功能
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: postIds
+          required: true
+          schema:
+            type: array
+            items:
+              type: integer
+              minimum: 1
+          style: form
+          explode: false
+          example: [1,2,3,4,5]
+          description: 要同步的帖子ID列表
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT Bearer Token
+      responses:
+        '200':
+          description: 同步成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer Token认证
+
+  schemas:
+    # ========================
+    # 通用响应结构
+    # ========================
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 响应状态码
+          example: 200
+        message:
+          type: string
+          description: 响应消息
+          example: "success"
+        data:
+          type: object
+          nullable: true
+          description: 响应数据
+      example:
+        code: 200
+        message: "success"
+        data: {}
+
+    # ========================
+    # 用户认证相关
+    # ========================
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+        - email
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: 用户名
+          example: "testuser123"
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+          format: password
+          description: 密码
+          example: "password123"
+        email:
+          type: string
+          format: email
+          description: 邮箱
+          example: "test@example.com"
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: 用户名
+          example: "testuser123"
+        password:
+          type: string
+          format: password
+          description: 密码
+          example: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          description: 用户ID
+          example: 123
+        username:
+          type: string
+          description: 用户名
+          example: "testuser123"
+        email:
+          type: string
+          description: 邮箱
+          example: "test@example.com"
+        token:
+          type: string
+          description: JWT Token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    UserProfileResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          description: 用户ID
+          example: 123
+        username:
+          type: string
+          description: 用户名
+          example: "testuser123"
+        email:
+          type: string
+          description: 邮箱
+          example: "test@example.com"
+
+    # ========================
+    # 帖子相关
+    # ========================
+    PostRequest:
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+          maxLength: 200
+          description: 帖子标题
+          example: "我的第一篇帖子"
+        content:
+          type: string
+          description: 帖子内容
+          example: "这是一个测试帖子的内容。"
+
+    PostResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 帖子ID
+          example: 123
+        userId:
+          type: integer
+          description: 作者ID
+          example: 456
+        username:
+          type: string
+          nullable: true
+          description: 作者用户名
+          example: "author123"
+        title:
+          type: string
+          description: 帖子标题
+          example: "我的第一篇帖子"
+        content:
+          type: string
+          description: 帖子内容
+          example: "这是一个测试帖子的内容。"
+        viewCount:
+          type: integer
+          description: 浏览次数
+          example: 100
+        likeCount:
+          type: integer
+          description: 点赞数
+          example: 15
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: "2025-11-06T09:00:00Z"
+        updateTime:
+          type: string
+          format: date-time
+          description: 更新时间
+          example: "2025-11-06T09:00:00Z"
+
+    PostListResponse:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResponse'
+        total:
+          type: integer
+          description: 总记录数
+          example: 100
+        size:
+          type: integer
+          description: 每页大小
+          example: 10
+        current:
+          type: integer
+          description: 当前页码
+          example: 1
+        pages:
+          type: integer
+          description: 总页数
+          example: 10
+
+    # ========================
+    # 评论相关
+    # ========================
+    CommentRequest:
+      type: object
+      required:
+        - postId
+        - content
+      properties:
+        postId:
+          type: integer
+          description: 帖子ID
+          example: 123
+        content:
+          type: string
+          maxLength: 1000
+          description: 评论内容
+          example: "这是一条评论"
+        parentId:
+          type: integer
+          nullable: true
+          description: 父评论ID（回复功能）
+          example: null
+
+    CommentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 评论ID
+          example: 789
+        postId:
+          type: integer
+          description: 帖子ID
+          example: 123
+        userId:
+          type: integer
+          description: 评论者ID
+          example: 456
+        username:
+          type: string
+          description: 评论者用户名
+          example: "commenter123"
+        parentId:
+          type: integer
+          nullable: true
+          description: 父评论ID
+          example: 788
+        parentContent:
+          type: string
+          nullable: true
+          description: 父评论内容
+          example: "这是一条父评论"
+        content:
+          type: string
+          description: 评论内容
+          example: "这是一条评论"
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+          example: "2025-11-06T09:00:00Z"
+        replyCount:
+          type: integer
+          description: 回复数量
+          example: 2
+        replies:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/CommentResponse'
+          description: 回复列表
+
+    CommentListResponse:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentResponse'
+        total:
+          type: integer
+          description: 总记录数
+          example: 50
+        size:
+          type: integer
+          description: 每页大小
+          example: 10
+        current:
+          type: integer
+          description: 当前页码
+          example: 1
+        pages:
+          type: integer
+          description: 总页数
+          example: 5
+
+    # ========================
+    # 点赞相关
+    # ========================
+    LikeResponse:
+      type: object
+      properties:
+        postId:
+          type: integer
+          description: 帖子ID
+          example: 123
+        likeCount:
+          type: integer
+          description: 当前点赞数
+          example: 16
+        isLiked:
+          type: boolean
+          description: 用户是否已点赞
+          example: true

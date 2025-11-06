@@ -23,6 +23,11 @@ public interface UserService {
     User findByEmail(String email);
 
     /**
+     * 根据ID查找用户
+     */
+    User findById(Long id);
+
+    /**
      * 验证密码
      */
     boolean validatePassword(User user, String rawPassword);
