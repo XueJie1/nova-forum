@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.novaforum.nova_forum.dto.*;
 import com.novaforum.nova_forum.entity.User;
+import com.novaforum.nova_forum.service.EmailService;
 import com.novaforum.nova_forum.service.UserService;
 import com.novaforum.nova_forum.util.JwtUtil;
 
@@ -24,15 +25,35 @@ public class UserController {
     private UserService userService;
 
     @Autowired
+    private EmailService emailService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
     /**
-     * 用户注册
+     * 用户注册（集成邮箱验证）
      */
     @PostMapping("/register")
     public ApiResponse<String> register(@Valid @RequestBody RegisterRequest request) {
         try {
-            // 转换DTO为实体
+            // 第一步：验证邮箱验证码
+            boolean isCodeValid = emailService.verifyCode(request.getEmail(), request.getCode());
+
+            if (!isCodeValid) {
+                return ApiResponse.error(400, "邮箱验证码错误或已过期");
+            }
+
+            // 第二步：检查用户名是否已存在
+            if (userService.findByUsername(request.getUsername()) != null) {
+                return ApiResponse.error(400, "用户名已存在");
+            }
+
+            // 第三步：检查邮箱是否已存在
+            if (userService.findByEmail(request.getEmail()) != null) {
+                return ApiResponse.error(400, "邮箱已被注册");
+            }
+
+            // 第四步：转换DTO为实体并注册用户
             User user = new User();
             BeanUtils.copyProperties(request, user);
 

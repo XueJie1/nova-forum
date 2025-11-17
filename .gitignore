@@ -17,3 +17,5 @@ buildNumber.properties
 .classpath
 
 application.yml
+.env
+.vscode

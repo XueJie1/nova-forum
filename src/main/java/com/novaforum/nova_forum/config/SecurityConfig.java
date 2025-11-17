@@ -33,6 +33,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         // 允许用户注册和登录接口不需要认证
                         .requestMatchers("/user/register", "/user/login").permitAll()
+                        // 允许邮箱验证相关接口不需要认证（注册前的准备步骤）
+                        .requestMatchers("/email/**").permitAll()
+                        // 允许搜索相关接口不需要认证（公开搜索功能）
+                        .requestMatchers("/search/**").permitAll()
                         // 其他所有请求都需要认证
                         .anyRequest().authenticated())
                 // 添加JWT过滤器

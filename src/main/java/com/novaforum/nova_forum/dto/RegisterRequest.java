@@ -21,6 +21,10 @@ public class RegisterRequest {
     @Email(message = "邮箱格式不正确")
     private String email;
 
+    @NotBlank(message = "邮箱验证码不能为空")
+    @Size(min = 6, max = 6, message = "验证码必须是6位")
+    private String code;
+
     // Getters and Setters
     public String getUsername() {
         return username;
@@ -44,5 +48,13 @@ public class RegisterRequest {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 }

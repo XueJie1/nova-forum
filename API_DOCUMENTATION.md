@@ -86,11 +86,11 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6I
 
 #### 参数说明
 
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-|------|------|------|------|------|
-| username | String | 是 | 3-50字符 | 用户名，唯一标识 |
-| password | String | 是 | 6-100字符 | 用户密码 |
-| email | String | 是 | 邮箱格式 | 用户邮箱 |
+| 字段     | 类型   | 必填 | 约束      | 说明             |
+| -------- | ------ | ---- | --------- | ---------------- |
+| username | String | 是   | 3-50字符  | 用户名，唯一标识 |
+| password | String | 是   | 6-100字符 | 用户密码         |
+| email    | String | 是   | 邮箱格式  | 用户邮箱         |
 
 #### 成功响应
 
@@ -145,10 +145,10 @@ curl -X POST http://localhost:8080/user/register \
 
 #### 参数说明
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| username | String | 是 | 用户名 |
-| password | String | 是 | 用户密码 |
+| 字段     | 类型   | 必填 | 说明     |
+| -------- | ------ | ---- | -------- |
+| username | String | 是   | 用户名   |
+| password | String | 是   | 用户密码 |
 
 #### 成功响应
 
@@ -263,10 +263,10 @@ Content-Type: application/json
 
 #### 参数说明
 
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-|------|------|------|------|------|
-| title | String | 是 | 1-200字符 | 帖子标题 |
-| content | String | 是 | 1-5000字符 | 帖子内容 |
+| 字段    | 类型   | 必填 | 约束       | 说明     |
+| ------- | ------ | ---- | ---------- | -------- |
+| title   | String | 是   | 1-200字符  | 帖子标题 |
+| content | String | 是   | 1-5000字符 | 帖子内容 |
 
 #### 成功响应
 
@@ -312,9 +312,9 @@ curl -X POST http://localhost:8080/post/create \
 
 #### 接口路径参数
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | Long | 帖子ID |
+| 参数 | 类型 | 说明   |
+| ---- | ---- | ------ |
+| id   | Long | 帖子ID |
 
 #### 请求头
 
@@ -334,10 +334,10 @@ Content-Type: application/json
 
 #### 参数说明
 
-| 字段 | 类型 | 必填 | 约束 | 说明 |
-|------|------|------|------|------|
-| title | String | 是 | 1-200字符 | 帖子标题 |
-| content | String | 是 | 1-5000字符 | 帖子内容 |
+| 字段    | 类型   | 必填 | 约束       | 说明     |
+| ------- | ------ | ---- | ---------- | -------- |
+| title   | String | 是   | 1-200字符  | 帖子标题 |
+| content | String | 是   | 1-5000字符 | 帖子内容 |
 
 #### 成功响应
 
@@ -383,9 +383,9 @@ curl -X PUT http://localhost:8080/post/123 \
 
 #### 接口路径参数
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | Long | 帖子ID |
+| 参数 | 类型 | 说明   |
+| ---- | ---- | ------ |
+| id   | Long | 帖子ID |
 
 #### 请求头
 
@@ -432,9 +432,9 @@ curl -X DELETE http://localhost:8080/post/123 \
 
 #### 接口路径参数
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | Long | 帖子ID |
+| 参数 | 类型 | 说明   |
+| ---- | ---- | ------ |
+| id   | Long | 帖子ID |
 
 #### 成功响应
 
@@ -458,17 +458,17 @@ curl -X DELETE http://localhost:8080/post/123 \
 
 #### 响应字段说明
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | Long | 帖子ID |
-| userId | Long | 作者ID |
-| username | String | 作者用户名 |
-| title | String | 帖子标题 |
-| content | String | 帖子内容 |
-| viewCount | Integer | 浏览次数 |
-| likeCount | Integer | 点赞数 |
-| createTime | LocalDateTime | 创建时间 |
-| updateTime | LocalDateTime | 更新时间 |
+| 字段       | 类型          | 说明       |
+| ---------- | ------------- | ---------- |
+| id         | Long          | 帖子ID     |
+| userId     | Long          | 作者ID     |
+| username   | String        | 作者用户名 |
+| title      | String        | 帖子标题   |
+| content    | String        | 帖子内容   |
+| viewCount  | Integer       | 浏览次数   |
+| likeCount  | Integer       | 点赞数     |
+| createTime | LocalDateTime | 创建时间   |
+| updateTime | LocalDateTime | 更新时间   |
 
 #### 错误响应
 
@@ -498,11 +498,11 @@ curl -X GET http://localhost:8080/post/123
 
 #### 查询参数
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| pageNum | Integer | 否 | 1 | 页码（从1开始） |
-| pageSize | Integer | 否 | 10 | 每页数量 |
-| userId | Long | 否 | - | 按用户ID筛选（可选） |
+| 参数     | 类型    | 必填 | 默认值 | 说明                 |
+| -------- | ------- | ---- | ------ | -------------------- |
+| pageNum  | Integer | 否   | 1      | 页码（从1开始）      |
+| pageSize | Integer | 否   | 10     | 每页数量             |
+| userId   | Long    | 否   | -      | 按用户ID筛选（可选） |
 
 #### 成功响应
 
@@ -548,6 +548,229 @@ curl -X GET "http://localhost:8080/post/list"
 
 # 获取指定用户的帖子
 curl -X GET "http://localhost:8080/post/list?userId=1&pageNum=1&pageSize=5"
+```
+
+---
+
+## 搜索接口
+
+### 1. 搜索帖子
+
+#### 接口信息
+
+- **请求方法**: `GET`
+- **接口路径**: `/search/posts`
+- **认证要求**: 无需认证
+
+#### 查询参数
+
+| 参数    | 类型    | 必填 | 默认值 | 说明            |
+| ------- | ------- | ---- | ------ | --------------- |
+| keyword | String  | 否   | -      | 搜索关键词      |
+| page    | Integer | 否   | 1      | 页码（从1开始） |
+| size    | Integer | 否   | 10     | 每页数量        |
+
+#### 成功响应
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "records": [
+      {
+        "id": 123,
+        "title": "搜索结果标题",
+        "content": "搜索结果内容...",
+        "userId": 1,
+        "username": "john_doe",
+        "viewCount": 10,
+        "likeCount": 5,
+        "createTime": "2024-01-01T10:00:00",
+        "updateTime": "2024-01-01T10:00:00"
+      }
+    ],
+    "total": 25,
+    "pages": 3,
+    "current": 1,
+    "size": 10,
+    "hasNext": true,
+    "hasPrevious": false,
+    "keyword": "Spring Boot",
+    "took": 45
+  }
+}
+```
+
+#### 响应字段说明
+
+| 字段        | 类型               | 说明             |
+| ----------- | ------------------ | ---------------- |
+| records     | List<PostDocument> | 搜索结果列表     |
+| total       | Long               | 总结果数         |
+| pages       | Long               | 总页数           |
+| current     | Long               | 当前页码         |
+| size        | Long               | 每页数量         |
+| hasNext     | Boolean            | 是否有下一页     |
+| hasPrevious | Boolean            | 是否有上一页     |
+| keyword     | String             | 搜索关键词       |
+| took        | Long               | 搜索耗时（毫秒） |
+
+#### 错误响应
+
+```json
+{
+  "code": 500,
+  "message": "搜索服务暂时不可用，请稍后重试",
+  "data": null
+}
+```
+
+#### cURL示例
+
+```bash
+# 搜索帖子
+curl -X GET "http://localhost:8080/search/posts?keyword=Spring Boot&page=1&size=10"
+
+# 获取所有帖子（无关键词）
+curl -X GET "http://localhost:8080/search/posts"
+```
+
+---
+
+### 2. 获取搜索建议
+
+#### 接口信息
+
+- **请求方法**: `GET`
+- **接口路径**: `/search/suggestions`
+- **认证要求**: 无需认证
+
+#### 查询参数
+
+| 参数    | 类型    | 必填 | 默认值 | 说明       |
+| ------- | ------- | ---- | ------ | ---------- |
+| keyword | String  | 是   | -      | 搜索关键词 |
+| size    | Integer | 否   | 5      | 建议数量   |
+
+#### 成功响应
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    "Spring Boot教程",
+    "Spring Boot最佳实践",
+    "Spring Boot问题解决",
+    "Spring Boot经验分享",
+    "Spring Boot性能优化"
+  ]
+}
+```
+
+#### cURL示例
+
+```bash
+curl -X GET "http://localhost:8080/search/suggestions?keyword=Spring&size=5"
+```
+
+---
+
+### 3. 创建搜索索引
+
+#### 接口信息
+
+- **请求方法**: `POST`
+- **接口路径**: `/search/index/create`
+- **认证要求**: 无需认证
+
+#### 成功响应
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": "索引创建成功"
+}
+```
+
+#### 错误响应
+
+```json
+{
+  "code": 500,
+  "message": "创建索引失败",
+  "data": null
+}
+```
+
+#### cURL示例
+
+```bash
+curl -X POST http://localhost:8080/search/index/create
+```
+
+---
+
+### 4. 重建搜索索引
+
+#### 接口信息
+
+- **请求方法**: `POST`
+- **接口路径**: `/search/index/rebuild`
+- **认证要求**: 无需认证
+
+#### 成功响应
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": "索引重建完成"
+}
+```
+
+#### cURL示例
+
+```bash
+curl -X POST http://localhost:8080/search/index/rebuild
+```
+
+---
+
+### 5. 删除搜索索引
+
+#### 接口信息
+
+- **请求方法**: `DELETE`
+- **接口路径**: `/search/index`
+- **认证要求**: 无需认证
+
+#### 成功响应
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": "索引删除成功"
+}
+```
+
+#### 错误响应
+
+```json
+{
+  "code": 500,
+  "message": "删除索引失败",
+  "data": null
+}
+```
+
+#### cURL示例
+
+```bash
+curl -X DELETE http://localhost:8080/search/index
 ```
 
 ---
@@ -701,8 +924,23 @@ curl -X GET http://localhost:8080/post/1
 ## 版本信息
 
 - **API版本**: v1.0
-- **文档版本**: 1.0
-- **最后更新**: 2024-11-05
+- **文档版本**: 1.1
+- **最后更新**: 2025-11-11
+
+## 更新日志
+
+### v1.1 (2024-11-11)
+- ✅ 新增全文搜索功能
+- ✅ 新增搜索建议功能
+- ✅ 新增索引管理功能
+- ✅ 优化API文档格式
+- ✅ 修复表格对齐问题
+
+### v1.0 (2024-11-05)
+- ✅ 初始版本发布
+- ✅ 用户认证接口
+- ✅ 帖子管理接口
+- ✅ 基础API文档
 
 ## 支持与联系
 

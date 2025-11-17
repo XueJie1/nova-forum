@@ -27,6 +27,9 @@ public class PostServiceImpl implements PostService {
     @Autowired
     private com.novaforum.nova_forum.service.UserService userService;
 
+    @Autowired
+    private com.novaforum.nova_forum.service.PostSyncService postSyncService;
+
     @Override
     @Transactional
     public Long createPost(Post post, Long userId) {
@@ -48,6 +51,14 @@ public class PostServiceImpl implements PostService {
             int result = postMapper.insert(post);
 
             if (result > 0) {
+                // 同步到Elasticsearch
+                try {
+                    postSyncService.syncPostToElasticsearch(post);
+                } catch (Exception e) {
+                    // Elasticsearch同步失败不影响主业务，记录日志
+                    e.printStackTrace();
+                }
+
                 return post.getId(); // 返回创建的帖子ID
             } else {
                 throw new RuntimeException("创建帖子失败");
@@ -87,6 +98,16 @@ public class PostServiceImpl implements PostService {
 
             int result = postMapper.updateById(post);
 
+            if (result > 0) {
+                // 同步到Elasticsearch
+                try {
+                    postSyncService.syncPostToElasticsearch(post);
+                } catch (Exception e) {
+                    // Elasticsearch同步失败不影响主业务，记录日志
+                    e.printStackTrace();
+                }
+            }
+
             return result > 0;
 
         } catch (Exception e) {
@@ -115,6 +136,16 @@ public class PostServiceImpl implements PostService {
             }
 
             int result = postMapper.deleteById(postId);
+
+            if (result > 0) {
+                // 从Elasticsearch删除索引
+                try {
+                    postSyncService.deletePostFromElasticsearch(postId);
+                } catch (Exception e) {
+                    // Elasticsearch删除失败不影响主业务，记录日志
+                    e.printStackTrace();
+                }
+            }
 
             return result > 0;
 
