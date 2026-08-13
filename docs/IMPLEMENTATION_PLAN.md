@@ -25,7 +25,7 @@ MyBatis Plus、JDBC 和 HikariCP 均采用阻塞式数据库访问模型，因�
 
 ## 2. 当前状态
 
-本计划以远程 `main` 的 `3fa7da1` 提交为当前实现基线。仓库已经从最初的项目骨架发展为具备主要业务模块的后端原型：
+本计划随远程 `main` 持续维护。仓库已经从最初的项目骨架发展为具备主要业务模块的后端原型：
 
 - 已实现用户注册、登录、个人资料查询、BCrypt 密码哈希和无状态 JWT 请求认证。
 - 已实现基于 Redis 的邮箱验证码、5 分钟有效期和原子 60 秒发送限流。
@@ -35,6 +35,7 @@ MyBatis Plus、JDBC 和 HikariCP 均采用阻塞式数据库访问模型，因�
 - 已将 Elasticsearch 索引管理接口限制为 `ADMIN`；现有 JWT 尚未携带角色权限，因此当前按默认拒绝策略关闭这些接口。
 - 已提供 OpenAPI YAML、API 使用说明，以及搜索与索引同步相关单元测试。
 - 已配置 MyBatis Plus、MySQL 和 HikariCP。
+- 已配置 GitHub Actions，在 Pull Request 和 `main` 推送时使用 Java 17 运行 Maven 测试。
 
 与本文档的目标架构相比，仍有以下主要差距：
 
@@ -45,8 +46,8 @@ MyBatis Plus、JDBC 和 HikariCP 均采用阻塞式数据库访问模型，因�
 - 帖子数据直接同步 Elasticsearch，尚无 Outbox、版本化索引别名和可恢复的最终一致性机制。
 - 数据库使用手工初始化 SQL，尚未引入 Flyway；普通 MyBatis Starter 与 MyBatis Plus Starter 仍重复存在。
 - OpenAPI 当前以静态 YAML 为主，尚未集成 Springdoc 自动生成和可执行 Swagger UI。
-- 测试主要覆盖搜索相关代码，认证、帖子、评论、点赞和并发场景仍缺少系统化测试。
-- Maven Wrapper 仍缺少 `.mvn/wrapper` 文件；Docker Compose、Actuator 指标和 GitHub Actions CI 尚未提供。
+- 测试目前覆盖搜索、索引同步、搜索权限和邮箱验证码限流；认证、帖子、评论、点赞和并发场景仍缺少系统化测试。
+- Maven Wrapper 仍缺少 `.mvn/wrapper` 文件；Docker Compose 和 Actuator 指标尚未提供。
 - 配置与日志仍需进行敏感信息审计，并轮换任何历史上已经提交或输出过的真实凭据。
 
 ## 3. 目标架构

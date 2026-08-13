@@ -10,22 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,9 +38,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - 参数验证
  * - 异常处理
  *
- * 注意：使用 TestSecurityConfig 来避免加载完整的 Security 配置
+ * 显式限定测试上下文，避免应用入口的 Mapper 扫描污染 Web MVC 切片。
  */
 @WebMvcTest(controllers = {SearchController.class})
+@ContextConfiguration(classes = SearchController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("搜索控制器单元测试")
 class SearchControllerTest {
@@ -56,11 +49,8 @@ class SearchControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private SearchService searchService;
-
-    @Autowired
-    private ApplicationContext applicationContext;
 
     private SearchResponse searchResponse;
     private PostDocument testPost;
@@ -92,32 +82,6 @@ class SearchControllerTest {
     }
 
     // ==================== 搜索帖子接口测试 ====================
-
-    @Test
-    @DisplayName("Debug - 打印所有映射")
-    void debugPrintMappings() throws Exception {
-        System.out.println("========== 检查 RequestMappingHandlerMapping ==========");
-        RequestMappingHandlerMapping mapping = applicationContext.getBean(RequestMappingHandlerMapping.class);
-        mapping.getHandlerMethods().forEach((key, value) -> {
-            System.out.println("Pattern: " + key + " -> " + value);
-        });
-
-        System.out.println("\n========== 检查 SearchController Bean ==========");
-        try {
-            SearchController controller = applicationContext.getBean(SearchController.class);
-            System.out.println("SearchController Bean 已加载: " + controller);
-        } catch (Exception e) {
-            System.out.println("SearchController Bean 未找到: " + e.getMessage());
-        }
-
-        System.out.println("\n========== 执行请求测试 ==========");
-        mockMvc.perform(get("/search/posts"))
-                .andDo(result -> {
-                    System.out.println("Request URI: " + result.getRequest().getRequestURI());
-                    System.out.println("Status: " + result.getResponse().getStatus());
-                    System.out.println("Response: " + result.getResponse().getContentAsString());
-                });
-    }
 
     @Test
     @DisplayName("测试搜索帖子 - 带关键词成功")
@@ -472,35 +436,4 @@ class SearchControllerTest {
         verify(searchService, times(1)).indexExists();
     }
 
-    // ==================== 测试配置类 ====================
-
-    /**
-     * 测试专用的 Security 配置
-     *
-     * 为什么需要这个配置？
-     * 1. @WebMvcTest 会加载 Web 层的所有组件，包括 Security Filter Chain
-     * 2. 我们的生产环境 SecurityConfig 依赖 JwtAuthenticationFilter
-     * 3. JwtAuthenticationFilter 又依赖 JwtUtil（普通 @Component）
-     * 4. @WebMvcTest 不会加载普通的 @Component，导致依赖注入失败
-     *
-     * 解决方案：
-     * - 使用 @Import 导入这个测试配置
-     * - 配置一个简单的、无需额外依赖的 Security 设置
-     * - 对于 SearchController 的测试，我们不需要真正的 JWT 认证
-     */
-    @org.springframework.context.annotation.Configuration
-    @org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-    static class TestSecurityConfig {
-
-        @org.springframework.context.annotation.Bean
-        public org.springframework.security.web.SecurityFilterChain filterChain(
-                org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
-            http
-                .csrf(csrf -> csrf.disable())  // 测试环境禁用 CSRF
-                .authorizeHttpRequests(auth -> auth
-                    .anyRequest().permitAll()  // 允许所有请求（测试环境）
-                );
-            return http.build();
-        }
-    }
 }
