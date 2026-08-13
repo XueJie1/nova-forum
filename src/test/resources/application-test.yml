@@ -1,0 +1,6 @@
+spring:
+  mail:
+    host: localhost
+    port: 2525
+    username: noreply@example.invalid
+    password: test-only
