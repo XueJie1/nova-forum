@@ -2,6 +2,7 @@ package com.novaforum.nova_forum.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -35,8 +36,10 @@ public class SecurityConfig {
                         .requestMatchers("/user/register", "/user/login").permitAll()
                         // 允许邮箱验证相关接口不需要认证（注册前的准备步骤）
                         .requestMatchers("/email/**").permitAll()
-                        // 允许搜索相关接口不需要认证（公开搜索功能）
-                        .requestMatchers("/search/**").permitAll()
+                        // 公开搜索只开放只读查询接口
+                        .requestMatchers(HttpMethod.GET, "/search/posts", "/search/suggestions").permitAll()
+                        // Elasticsearch 索引管理属于高风险运维操作，仅管理员可访问
+                        .requestMatchers("/search/index", "/search/index/**").hasRole("ADMIN")
                         // 其他所有请求都需要认证
                         .anyRequest().authenticated())
                 // 添加JWT过滤器

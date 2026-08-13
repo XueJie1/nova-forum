@@ -61,8 +61,8 @@ public class EmailController {
                 return ApiResponse.success(EmailVerifyResponse.failed("验证码错误或已过期"));
             }
         } catch (Exception e) {
-            log.error("验证邮箱验证码异常，邮箱: {}, 验证码: {}, 异常: {}",
-                    request.getEmail(), request.getCode(), e.getMessage(), e);
+            log.error("验证邮箱验证码异常，邮箱: {}, 异常: {}",
+                    request.getEmail(), e.getMessage(), e);
             return ApiResponse.success(EmailVerifyResponse.failed("验证过程出现异常"));
         }
     }

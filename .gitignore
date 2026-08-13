@@ -19,3 +19,6 @@ buildNumber.properties
 application.yml
 .env
 .vscode
+
+# Runtime logs
+*.log

@@ -3,7 +3,6 @@ package com.novaforum.nova_forum.service.impl;
 import com.novaforum.nova_forum.service.EmailService;
 import com.novaforum.nova_forum.util.CodeGenerator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.SimpleMailMessage;
@@ -19,14 +18,11 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class EmailServiceImpl implements EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    private final String fromEmail;
 
     // Redis Key前缀
     private static final String VERIFICATION_CODE_PREFIX = "email:verification:";
@@ -38,11 +34,20 @@ public class EmailServiceImpl implements EmailService {
     // 发送频率限制（秒）
     private static final long SEND_RATE_LIMIT_SECONDS = 60;
 
+    public EmailServiceImpl(
+            JavaMailSender mailSender,
+            RedisTemplate<String, Object> redisTemplate,
+            @Value("${spring.mail.username}") String fromEmail) {
+        this.mailSender = mailSender;
+        this.redisTemplate = redisTemplate;
+        this.fromEmail = fromEmail;
+    }
+
     @Override
     public boolean sendVerificationCode(String email) {
         try {
-            // 检查发送频率限制
-            if (!checkSendRateLimit(email)) {
+            // 使用 Redis SET NX EX 原子获取发送许可，避免并发请求绕过限流
+            if (!tryAcquireSendPermit(email)) {
                 log.warn("发送验证码频率过高，邮箱: {}", email);
                 return false;
             }
@@ -57,10 +62,10 @@ public class EmailServiceImpl implements EmailService {
             // 发送邮件
             boolean sent = sendEmail(email, code);
             if (sent) {
-                // 设置发送频率限制
-                setSendRateLimit(email);
-                log.info("验证码发送成功，邮箱: {}, 验证码: {}", email, code);
+                log.info("验证码发送成功，邮箱: {}", email);
             } else {
+                // 邮件未送达时删除不可用的验证码，但保留冷却键以抑制 SMTP 滥用
+                redisTemplate.delete(VERIFICATION_CODE_PREFIX + email);
                 log.error("验证码发送失败，邮箱: {}", email);
             }
 
@@ -83,7 +88,7 @@ public class EmailServiceImpl implements EmailService {
             }
 
             if (!cachedCode.equals(code)) {
-                log.warn("验证码不匹配，邮箱: {}, 期望: {}, 实际: {}", email, cachedCode, code);
+                log.warn("验证码不匹配，邮箱: {}", email);
                 return false;
             }
 
@@ -96,7 +101,7 @@ public class EmailServiceImpl implements EmailService {
             log.info("邮箱验证成功，邮箱: {}", email);
             return true;
         } catch (Exception e) {
-            log.error("验证验证码异常，邮箱: {}, 验证码: {}, 异常: {}", email, code, e.getMessage(), e);
+            log.error("验证验证码异常，邮箱: {}, 异常: {}", email, e.getMessage(), e);
             return false;
         }
     }
@@ -122,7 +127,7 @@ public class EmailServiceImpl implements EmailService {
             // 缓存验证码，设置5分钟过期
             redisTemplate.opsForValue().set(redisKey, code, CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
 
-            log.info("生成并缓存验证码，邮箱: {}, 验证码: {}", email, code);
+            log.info("生成并缓存验证码，邮箱: {}", email);
             return code;
         } catch (Exception e) {
             log.error("生成并缓存验证码异常，邮箱: {}, 异常: {}", email, e.getMessage(), e);
@@ -155,19 +160,13 @@ public class EmailServiceImpl implements EmailService {
     }
 
     /**
-     * 检查发送频率限制
+     * 原子获取发送许可并设置过期时间
      */
-    private boolean checkSendRateLimit(String email) {
+    private boolean tryAcquireSendPermit(String email) {
         String redisKey = SEND_RATE_LIMIT_PREFIX + email;
-        return !redisTemplate.hasKey(redisKey);
-    }
-
-    /**
-     * 设置发送频率限制
-     */
-    private void setSendRateLimit(String email) {
-        String redisKey = SEND_RATE_LIMIT_PREFIX + email;
-        redisTemplate.opsForValue().set(redisKey, "1", SEND_RATE_LIMIT_SECONDS, TimeUnit.SECONDS);
+        Boolean acquired = redisTemplate.opsForValue()
+                .setIfAbsent(redisKey, "1", SEND_RATE_LIMIT_SECONDS, TimeUnit.SECONDS);
+        return Boolean.TRUE.equals(acquired);
     }
 
     /**
