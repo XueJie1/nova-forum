@@ -4,6 +4,20 @@
 
 ---
 
+## 记录 4 — 2026-08-31
+
+- **优先级**：测试缺失
+- **问题**：`EmailServiceImpl` 没有单元测试。
+- **修改方案**：新增 `EmailServiceImplTest`，用 Mockito 模拟 `RedisTemplate`/`JavaMailSender`，覆盖 `sendVerificationCode`（频率限制 / 发送成功 / 发送失败 / 异常）、`verifyCode`（验证码不存在 / 不匹配 / 成功——删除验证码并标记已验证）、`isEmailVerified`（已验证 / 未验证 / null / 异常）、`generateAndCacheCode`（生成 6 位验证码并缓存 / 异常）。
+- **修改文件**：`src/test/java/com/novaforum/nova_forum/service/impl/EmailServiceImplTest.java`（新增）
+- **测试结果**：14 个测试全部通过。
+- **备注**：
+  - `@Value("${spring.mail.username}")` 注入的 `fromEmail` 在纯 Mockito 环境中不会填充，测试通过反射手动设置。
+  - `RedisTemplate.opsForValue().set(key, value, timeout, unit)` 返回 `void`（用 `doNothing()`），`RedisTemplate.delete(key)` 返回 `Boolean`（用 `doReturn(true)`）。
+  - `JavaMailSender.send()` 有两个重载，用 `any(SimpleMailMessage.class)` 消除歧义。
+  - 类上加 `@MockitoSettings(strictness = Strictness.LENIENT)`，避免因 setUp 中固定的 `opsForValue()` mock 在个别用例中未被调用而触发严格 stub 校验。
+  - `Strictness` 位于 `org.mockito.quality` 包。
+
 ## 记录 3 — 2026-08-31
 
 - **优先级**：测试缺失
