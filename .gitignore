@@ -9,7 +9,7 @@ buildNumber.properties
 .mvn/timing.properties
 # https://maven.apache.org/wrapper/#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
-
+.env
 # Eclipse m2e generated files
 # Eclipse Core
 .project
@@ -22,3 +22,7 @@ application.yml
 
 # Runtime logs
 *.log
+
+# frontend
+frontend/node_modules
+frontend/.env
