@@ -4,6 +4,18 @@
 
 ---
 
+## 记录 3 — 2026-08-31
+
+- **优先级**：测试缺失
+- **问题**：`CommentServiceImpl` 没有单元测试。
+- **修改方案**：新增 `CommentServiceImplTest`，用 Mockito 模拟 `CommentMapper`/`PostMapper`/`UserMapper`，覆盖 `createComment`（帖子/父评论校验、成功回填主键）、`canEditComment`（所有权判断）、`updateComment`/`deleteComment`（权限校验与连同子评论批量删除）、`buildCommentTree`（空值/单层/多层级/时间升序）、`getCommentsByPostId`（树构建与分页）。
+- **修改文件**：`src/test/java/com/novaforum/nova_forum/service/impl/CommentServiceImplTest.java`（新增）
+- **测试结果**：16 个测试全部通过。
+- **备注**：
+  - Mockito 5.x 移除了 `verifyZeroInteractions`，改用 `verifyNoInteractions`。
+  - `buildCommentTree` 对无子评论的顶级评论 `replies` 为 `null`（未初始化），测试据此断言。
+  - `getAllSubComments` 递归查询子评论，mock 必须按调用次序返回（首次返回子评论列表、后续返回空），否则无限递归导致 `StackOverflowError`。
+
 ## 记录 2 — 2026-08-31
 
 - **优先级**：测试缺失
