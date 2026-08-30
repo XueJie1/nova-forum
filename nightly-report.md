@@ -4,6 +4,19 @@
 
 ---
 
+## 记录 5 — 2026-08-31
+
+- **优先级**：测试缺失
+- **问题**：`LikeServiceImpl` 没有单元测试。
+- **修改方案**：新增 `LikeServiceImplTest`，用 Mockito 模拟 `RedisTemplate`/`PostMapper`/`PostLikeMapper`，覆盖 `toggleLike`（帖子不存在 / 点赞 / 取消点赞 / 计数为 null 降级）、`getLikeCount`（缓存命中 / 缓存未命中回写 / 全 null）、`isLiked`、`getLikeCountFromDatabase`（存在 / 不存在）、`syncLikeCountsToDatabase`（跳过不存在 / 同步记录与点赞数 / 无用户不插入）。
+- **修改文件**：`src/test/java/com/novaforum/nova_forum/service/impl/LikeServiceImplTest.java`（新增）
+- **测试结果**：15 个测试全部通过。
+- **备注**：
+  - `RedisTemplate.opsForSet().add/remove` 返回 `Long`（用 `doReturn(1L)`），`isMember` 返回 `Boolean`，`members` 返回 `Set`（断言需用 `HashSet`/`emptySet`，不能是 `List`）。
+  - `ValueOperations.set(key, value, timeout, unit)` 返回 `void`（用 `doNothing()`）。
+  - `SetOperations.isMember(K, Object)` 第二个参数用 `any(Object.class)`，裸 `any()` 会引发泛型推断错误。
+  - 类上加 `@MockitoSettings(strictness = Strictness.LENIENT)`，避免 setUp 中固定的 `opsForSet()/opsForValue()` mock 在个别用例中未被调用而触发严格 stub 校验。
+
 ## 记录 4 — 2026-08-31
 
 - **优先级**：测试缺失
