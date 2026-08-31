@@ -120,25 +120,25 @@ class PostServiceImplTest {
     }
 
     @Test
-    @DisplayName("updatePost - 帖子不存在时拒绝更新")
-    void testUpdatePost_NotFound_Rejected() {
+    @DisplayName("updatePost - 帖子不存在时抛出IllegalArgumentException")
+    void testUpdatePost_NotFound_ThrowsIllegalArgumentException() {
         when(postMapper.selectById(1L)).thenReturn(null);
         testPost.setId(1L);
         assertThatThrownBy(() -> postService.updatePost(testPost, 100L))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("帖子不存在");
     }
 
     @Test
-    @DisplayName("updatePost - 非作者无法编辑（被拒绝）")
-    void testUpdatePost_NotAuthor_Rejected() {
+    @DisplayName("updatePost - 非作者无法编辑，抛出SecurityException")
+    void testUpdatePost_NotAuthor_ThrowsSecurityException() {
         Post existing = new Post();
         existing.setId(1L);
         existing.setUserId(999L);
         when(postMapper.selectById(1L)).thenReturn(existing);
         testPost.setId(1L);
         assertThatThrownBy(() -> postService.updatePost(testPost, 100L))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("只能编辑自己的帖子");
     }
 
@@ -173,23 +173,23 @@ class PostServiceImplTest {
     }
 
     @Test
-    @DisplayName("deletePost - 帖子不存在时拒绝删除")
-    void testDeletePost_NotFound_Rejected() {
+    @DisplayName("deletePost - 帖子不存在时抛出IllegalArgumentException")
+    void testDeletePost_NotFound_ThrowsIllegalArgumentException() {
         when(postMapper.selectById(1L)).thenReturn(null);
         assertThatThrownBy(() -> postService.deletePost(1L, 100L))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("帖子不存在");
     }
 
     @Test
-    @DisplayName("deletePost - 非作者无法删除（被拒绝）")
-    void testDeletePost_NotAuthor_Rejected() {
+    @DisplayName("deletePost - 非作者无法删除，抛出SecurityException")
+    void testDeletePost_NotAuthor_ThrowsSecurityException() {
         Post existing = new Post();
         existing.setId(1L);
         existing.setUserId(999L);
         when(postMapper.selectById(1L)).thenReturn(existing);
         assertThatThrownBy(() -> postService.deletePost(1L, 100L))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("只能删除自己的帖子");
     }
 
@@ -219,11 +219,11 @@ class PostServiceImplTest {
     }
 
     @Test
-    @DisplayName("getPostDetail - 帖子不存在时拒绝返回")
-    void testGetPostDetail_NotFound_Rejected() {
+    @DisplayName("getPostDetail - 帖子不存在时抛出IllegalArgumentException")
+    void testGetPostDetail_NotFound_ThrowsIllegalArgumentException() {
         when(postMapper.selectPostWithAuthorById(1L)).thenReturn(null);
         assertThatThrownBy(() -> postService.getPostDetail(1L))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("帖子不存在");
     }
 

@@ -64,6 +64,8 @@ public class PostServiceImpl implements PostService {
                 throw new RuntimeException("创建帖子失败");
             }
 
+        } catch (IllegalArgumentException | SecurityException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("创建帖子异常：" + e.getMessage());
         }
@@ -110,6 +112,8 @@ public class PostServiceImpl implements PostService {
 
             return result > 0;
 
+        } catch (IllegalArgumentException | SecurityException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("更新帖子异常：" + e.getMessage());
         }
@@ -149,6 +153,8 @@ public class PostServiceImpl implements PostService {
 
             return result > 0;
 
+        } catch (IllegalArgumentException | SecurityException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("删除帖子异常：" + e.getMessage());
         }
@@ -171,6 +177,8 @@ public class PostServiceImpl implements PostService {
 
             return post;
 
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("获取帖子详情异常：" + e.getMessage());
         }

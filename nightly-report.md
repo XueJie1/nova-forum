@@ -4,6 +4,18 @@
 
 ---
 
+## 记录 6 — 2026-08-31
+
+- **优先级**：修复已知缺陷
+- **问题**：`PostServiceImpl.updatePost/deletePost/getPostDetail` 中 `IllegalArgumentException`/`SecurityException` 被外层 `catch (Exception e)` 吞掉并包装成 `RuntimeException`，导致 `PostController` 中对应的 `catch (IllegalArgumentException)`(400) 与 `catch (SecurityException)`(403) 成为死代码——非法请求返回 500 而非预期的 400/403。
+- **修改方案**：在 `createPost`/`updatePost`/`deletePost`/`getPostDetail` 四个方法的 `catch` 链中增加 `catch (IllegalArgumentException | SecurityException e) { throw e; }`，让特定异常直接传播到 Controller，仅对真正的意外异常做兜底包装。同步更新 `PostServiceImplTest` 中 5 个测试用例的断言：`帖子不存在` 从断言 `RuntimeException` 改为断言 `IllegalArgumentException`；`非作者` 从断言 `RuntimeException` 改为断言 `SecurityException`。
+- **修改文件**：
+  - `src/main/java/com/novaforum/nova_forum/service/impl/PostServiceImpl.java`（修复）
+  - `src/test/java/com/novaforum/nova_forum/service/impl/PostServiceImplTest.java`（更新断言）
+- **备注**：`getPostList` 方法本身不抛出 `IllegalArgumentException`/`SecurityException`，无需改动。
+
+---
+
 ## 记录 5 — 2026-08-31
 
 - **优先级**：测试缺失
@@ -51,7 +63,7 @@
 - **修改文件**：`src/test/java/com/novaforum/nova_forum/service/impl/PostServiceImplTest.java`（新增）
 - **测试结果**：22 个测试全部通过；PostServiceImpl 行覆盖约 88%。
 - **备注**：
-  - 发现既有 bug（未修复，遵守"不改变现有功能"约束）：`PostServiceImpl.updatePost/deletePost/getPostDetail` 把 `IllegalArgumentException`/`SecurityException` 在 `try` 块内抛出并被外层 `catch (Exception)` 包装成通用 `RuntimeException`，导致 `PostController` 中对应的 `catch (IllegalArgumentException)`(400) 与 `catch (SecurityException)`(403) 成为死代码——非法请求返回 500 而非预期的 400/403。已在测试中以"拒绝行为"断言记录该现状，供后续迭代修复。
+  - 已修复（见记录 6）：`PostServiceImpl.updatePost/deletePost/getPostDetail` 的异常传播问题已修正，测试断言同步更新为验证 `IllegalArgumentException`/`SecurityException` 正确传播。
   - AssertJ 无 `assertThatSecurityException()`，改用 `assertThatThrownBy(...).isInstanceOf(SecurityException.class)`。
   - Mockito 5.x 移除了 `verifyZeroInteractions`，改用 `verifyNoInteractions`。
 
