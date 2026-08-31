@@ -4,6 +4,31 @@
 
 ---
 
+## 记录 7 — 2026-08-31
+
+- **优先级**：修复已知缺陷
+- **问题**：`SearchControllerTest` 的 20 个用例无法通过。本位于 JWT 安全过滤链之后（`SecurityConfig` 的 `SecurityFilterChain` 通过 `addFilterBefore` 挂入 `JwtAuthenticationFilter`）。修复经历两轮：
+  1. 初版误删 `@ContextConfiguration(classes = SearchController.class)`，导致 `@WebMvcTest` 自动识别到 `@SpringBootApplication` 入口 `NovaForumApplication` 并加载完整应用上下文，`SecurityFilterChain` 因缺少 `JwtUtil` bean 而上下文加载失败（`UnsatisfiedDependencyException`）。
+  2. 正确方案：参照本项目已有的 `SecurityConfigTest` 写法，用 `@ContextConfiguration(classes = {SearchController.class, SecurityConfig.class, JwtAuthenticationFilter.class})` 把安全链一并载入切片，并用 `@MockitoBean JwtUtil` 提供该 bean；保留 `@AutoConfigureMockMvc(addFilters = false)` 使请求直接到达 Controller 以测业务逻辑（鉴权由 `SecurityConfigTest` 覆盖）。上下文不再加载 MySQL/Redis/ES（Spring 懒连接）。
+- **修改文件**：`src/test/java/com/novaforum/nova_forum/controller/SearchControllerTest.java`（恢复 `@ContextConfiguration` 并补全 `SecurityConfig`/`JwtAuthenticationFilter`、新增 `@MockitoBean JwtUtil`、更新 Javadoc）
+- **验证**：`mvn -Dtest=SearchControllerTest test` → 20 个用例全部通过；上下文在无外部服务时成功加载。
+
+---
+
+## 记录 8 — 2026-08-31
+
+- **优先级**：修复测试缺陷（使 CI 跑通）
+- **问题**：`EmailServiceImplTest.testSendVerificationCode_Success` 断言 `sendVerificationCode(...)` 返回 `true`，但实现 `tryAcquireSendPermit()` 使用 `RedisTemplate.opsForValue().setIfAbsent()`（原子 SET NX EX 获取频率许可）返回 `Boolean`，测试从未 mock 该方法，Mockito 默认返回 `null`，`Boolean.TRUE.equals(null)` → `false`，方法被判定为频率过高而返回 `false`。该 mock 遗漏同时影响其余三个 `sendVerificationCode` 用例（它们因 `setIfAbsent` 返回 `null` 而“巧合地”返回 `false` 通过，并未真正测到各自分支）。实现另引用了不存在的 `setSendRateLimit()`（测试注释仍引用它）。
+- **修改方案**：为四个用例分别 mock `setIfAbsent`——`RateLimited` 返回 `false`、`Success`/`SendFailed` 返回 `true`、`Exception` 抛异常；`Success` 的断言由 `verify(valueOps, atLeast(2)).set(...)` 更正为 `times(1)`（实现仅由 `generateAndCacheCode` 写入一次）。
+- **修改文件**：`src/test/java/com/novaforum/nova_forum/service/impl/EmailServiceImplTest.java`
+- **验证**：`mvn test` → 151 个用例全部通过（此前 `SearchControllerTest` 20 错 + `EmailServiceImplTest` 1 错）。
+
+**CI 相关发现（未在本记录改动）**：
+- 项目无需外部服务（MySQL/Redis/ES/SMTP）即可跑测试：所有 Service/Controller 测试均用 Mockito，`NovaForumApplicationTests.contextLoads` 因 Spring 懒连接在无服务时亦通过。
+- `pom.xml` 中 JaCoCo `jacoco-check` 未指定 `<phase>`，默认落在 `verify` 阶段，故当前 CI（`mvn test`）从不执行覆盖率检查；若执行 `mvn verify`，覆盖率不达标：`controller` 16%、`util` 10%（均 < 70%），仅 `service.impl` 达标。待决定：补充 controller/util 单测以闭合覆盖率，或调整 CI 仅跑 `mvn test`。
+
+---
+
 ## 记录 6 — 2026-08-31
 
 - **优先级**：修复已知缺陷

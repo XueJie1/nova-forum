@@ -63,7 +63,9 @@ class EmailServiceImplTest {
     @Test
     @DisplayName("sendVerificationCode - 触发频率限制返回false")
     void testSendVerificationCode_RateLimited() {
-        when(redisTemplate.hasKey(anyString())).thenReturn(true);
+        // 实现通过 setIfAbsent 原子获取发送许可；未获取到许可则直接返回 false，不发送邮件
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), anyLong(), any(TimeUnit.class)))
+                .thenReturn(false);
 
         assertThat(emailService.sendVerificationCode("user@example.com")).isFalse();
         verifyNoInteractions(mailSender);
@@ -72,20 +74,22 @@ class EmailServiceImplTest {
     @Test
     @DisplayName("sendVerificationCode - 发送成功")
     void testSendVerificationCode_Success() {
-        when(redisTemplate.hasKey(anyString())).thenReturn(false);
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), anyLong(), any(TimeUnit.class)))
+                .thenReturn(true);
         doNothing().when(valueOps).set(anyString(), any(), anyLong(), any(TimeUnit.class));
         doNothing().when(mailSender).send(any(SimpleMailMessage.class));
 
         assertThat(emailService.sendVerificationCode("user@example.com")).isTrue();
         verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
-        // 成功后设置发送频率限制（redis 写操作由 generateAndCacheCode 与 setSendRateLimit 各一次）
-        verify(valueOps, atLeast(2)).set(anyString(), any(), anyLong(), any(TimeUnit.class));
+        // 频率许可由 setIfAbsent 获取，验证码仅由 generateAndCacheCode 写入一次
+        verify(valueOps, times(1)).set(anyString(), any(), anyLong(), any(TimeUnit.class));
     }
 
     @Test
     @DisplayName("sendVerificationCode - 邮件发送失败返回false")
     void testSendVerificationCode_SendFailed() {
-        when(redisTemplate.hasKey(anyString())).thenReturn(false);
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), anyLong(), any(TimeUnit.class)))
+                .thenReturn(true);
         doNothing().when(valueOps).set(anyString(), any(), anyLong(), any(TimeUnit.class));
         doThrow(new RuntimeException("SMTP 错误")).when(mailSender).send(any(SimpleMailMessage.class));
 
@@ -95,7 +99,8 @@ class EmailServiceImplTest {
     @Test
     @DisplayName("sendVerificationCode - 异常返回false")
     void testSendVerificationCode_Exception() {
-        when(redisTemplate.hasKey(anyString())).thenThrow(new RuntimeException("Redis 错误"));
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), any(), anyLong(), any(TimeUnit.class)))
+                .thenThrow(new RuntimeException("Redis 错误"));
 
         assertThat(emailService.sendVerificationCode("user@example.com")).isFalse();
     }

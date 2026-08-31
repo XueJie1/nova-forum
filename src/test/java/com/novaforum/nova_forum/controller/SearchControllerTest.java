@@ -1,9 +1,12 @@
 package com.novaforum.nova_forum.controller;
 
+import com.novaforum.nova_forum.config.JwtAuthenticationFilter;
+import com.novaforum.nova_forum.config.SecurityConfig;
 import com.novaforum.nova_forum.dto.SearchRequest;
 import com.novaforum.nova_forum.dto.SearchResponse;
 import com.novaforum.nova_forum.entity.PostDocument;
 import com.novaforum.nova_forum.service.SearchService;
+import com.novaforum.nova_forum.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,24 +33,35 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * SearchController 单元测试
  *
- * 使用 @WebMvcTest 进行 Controller 层测试
+ * 使用 @WebMvcTest 进行 Controller 层测试。
+ *
+ * 本 Controller 位于 JWT 安全过滤链之后，因此必须通过 @ContextConfiguration 把
+ * SecurityConfig（@EnableWebSecurity）与 JwtAuthenticationFilter 一并载入切片上下文，
+ * 并用 @MockitoBean 提供 JwtUtil，否则 SecurityFilterChain 因缺少 JwtUtil bean 而
+ * 导致上下文加载失败。@AutoConfigureMockMvc(addFilters = false) 关闭过滤器执行，
+ * 使请求直接到达 Controller 以测试其业务逻辑（鉴权由 SecurityConfigTest 覆盖）。
+ *
  * 测试覆盖：
  * - 搜索帖子接口
  * - 搜索建议接口
  * - 索引管理接口（创建、删除、重建、状态查询）
- * - 参数验证
  * - 异常处理
- *
- * 显式限定测试上下文，避免应用入口的 Mapper 扫描污染 Web MVC 切片。
  */
 @WebMvcTest(controllers = {SearchController.class})
-@ContextConfiguration(classes = SearchController.class)
+@ContextConfiguration(classes = {
+        SearchController.class,
+        SecurityConfig.class,
+        JwtAuthenticationFilter.class
+})
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("搜索控制器单元测试")
 class SearchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
 
     @MockitoBean
     private SearchService searchService;
