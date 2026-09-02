@@ -27,3 +27,12 @@ application.yml
 # frontend
 frontend/node_modules
 frontend/.env
+
+# Local Maven repo mirrors
+.mvn-repo/
+ch/
+com/
+io/
+jakarta/
+org/
+redis/
